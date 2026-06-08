@@ -810,7 +810,7 @@ async function hentNVADirekte(utgiver, serietittel, issn) {
         nvaId: identifier, title, year,
         rapportNr: serieNr,
         isbn: isbnListe[0] || '', isbnListe,
-        seriesName: serieNavn, seriesIssnPrint: serieIssn, seriesIssnOnline,
+        seriesName: serieNavn, seriesIssnPrint: serieIssn, seriesIssnOnline: serieIssnOnline,
         publisherName: ctx.publisher?.name || '',
         publicationType: ref.publicationInstance?.type || '',
         pages: ref.publicationInstance?.pages?.pages || '',

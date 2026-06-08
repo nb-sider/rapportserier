@@ -1,0 +1,76 @@
+name: Oppdater sjekk-cache
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Hver mandag kl. 06:00 UTC
+  workflow_dispatch:        # Kan også kjøres manuelt fra GitHub
+
+jobs:
+  oppdater:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Hent kode
+        uses: actions/checkout@v4
+
+      - name: Sett opp Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Installer avhengigheter
+        run: pip install openpyxl requests beautifulsoup4
+
+      - name: Kjør sjekk mot NVA
+        run: python3 sjekk_rapportserier.py
+        timeout-minutes: 60
+
+      - name: Generer delte cache-filer fra resultater
+        run: |
+          python3 - <<'EOF'
+          import json
+          from pathlib import Path
+
+          status_file = Path("rapport_status.json")
+          if not status_file.exists():
+              print("Ingen rapport_status.json funnet – hopper over")
+              exit(0)
+
+          status = json.loads(status_file.read_text(encoding="utf-8"))
+
+          sjekk = {}
+          for s in status.get("serier", []):
+              name = s.get("name", "")
+              if not name:
+                  continue
+              sjekk[name] = {
+                  "name": name,
+                  "checkedAt": s.get("checkedAt", ""),
+                  "nb": s.get("nb", {}),
+                  "publisher": {
+                      "jsRendered": s.get("publisher_data", {}).get("js_rendered", False),
+                      "error":      s.get("publisher_data", {}).get("error"),
+                      "totalFunnet": len(s.get("mangler", [])),
+                  },
+                  "mangler": s.get("mangler", []),
+              }
+
+          # Del i to filer (< 25 MB per fil for GitHub web-opplasting)
+          names = sorted(sjekk.keys())
+          mid = len(names) // 2
+          for bokstav, utvalg in [("a", names[:mid]), ("b", names[mid:])]:
+              del_ = {k: sjekk[k] for k in utvalg}
+              out = json.dumps(del_, ensure_ascii=False, separators=(",", ":"))
+              Path(f"sjekk_cache_{bokstav}.json").write_text(out, encoding="utf-8")
+              print(f"sjekk_cache_{bokstav}.json: {len(out)/1e6:.1f} MB ({len(del_)} serier)")
+          EOF
+
+      - name: Commit og push oppdatering
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sjekk_cache_a.json sjekk_cache_b.json rapport_status.json
+          git diff --staged --quiet || git commit -m "Automatisk sjekk-oppdatering $(date -u +%Y-%m-%d)"
+          git push

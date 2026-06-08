@@ -16,7 +16,8 @@ Dashboard for å overvåke om norske rapportserier er avlevert til Nasjonalbibli
 Last opp disse filene til repoet:
 - `index.html`
 - `serier.json`
-- `sjekk_cache.json` *(forhåndslagrede sjekk-resultater – valgfri, men anbefalt)*
+- `sjekk_cache_a.json` *(forhåndslagrede sjekk-resultater, del 1 – valgfri, men anbefalt)*
+- `sjekk_cache_b.json` *(forhåndslagrede sjekk-resultater, del 2 – valgfri, men anbefalt)*
 
 Det enkleste er via GitHub-webgrensesnittet: klikk **Add file → Upload files**.
 
